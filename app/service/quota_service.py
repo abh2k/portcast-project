@@ -31,6 +31,16 @@ class QuotaService:
     def _ttl(self) -> int:
         return ttl_seconds_until_reset_with_buffer(self.settings.idempotency_ttl_buffer_seconds)
 
+    @staticmethod
+    def _bool_from_lua(value: object) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return int(value) == 1
+        if isinstance(value, str):
+            return value == "1"
+        return False
+
     def _ensure_state_initialized(self, org_id: str, feature: str, period: str) -> bool:
         key = self.state_key(org_id, feature, period)
         if self.redis.exists(key):
@@ -92,7 +102,7 @@ class QuotaService:
             feature,
             period,
         )
-        return ConsumeResult(allowed=bool(result[0]), reason=str(result[1]))
+        return ConsumeResult(allowed=self._bool_from_lua(result[0]), reason=str(result[1]))
 
     def _resolve_request_metadata(self, request_id: str) -> Optional[dict]:
         data = self.redis.hgetall(self.request_meta_key(request_id))
@@ -121,7 +131,7 @@ class QuotaService:
             self.request_meta_key(request_id),
             self._ttl(),
         )
-        return RefundResult(success=bool(result[0]), reason=str(result[1]))
+        return RefundResult(success=self._bool_from_lua(result[0]), reason=str(result[1]))
 
     def usage(self, org_id: str, feature: str) -> UsageResult:
         period = current_period()
