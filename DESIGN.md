@@ -12,16 +12,23 @@ This repository provides a FastAPI service exposing:
 
 ## Shared state and correctness model
 
-Live quota state is in Redis under monthly namespaced keys:
+Redis stores:
 
-- `quota:{org_id}:{feature}:{period}:state` (hash: `limit`, `used`)
-- `quota:{org_id}:{feature}:{period}:consume:{request_id}`
-- `quota:{org_id}:{feature}:{period}:refund:{request_id}`
+1. `quota:{org_id}:{feature}:{period}:state`
+   - `limit`
+   - `used`
+
+2. `quota:request:{request_id}:meta`
+   - `org_id`
+   - `feature`
+   - `period`
+   - `units`
+   - `status`
 
 Atomic correctness comes from Lua script execution (`EVALSHA`) in Redis:
 
-- `consume.lua` performs idempotency check, quota check, then increments.
-- `refund.lua` validates original consume, enforces refund idempotency, then decrements.
+- `consume.lua` checks `request_key.status` for idempotency, validates quota, increments `used`, and writes request metadata with `status=consumed`.
+- `refund.lua` resolves refund amount and period from `request_key`, decrements `used`, and flips `status=refunded` idempotently.
 
 Because each script runs atomically, concurrent updates for the same key cannot over-serve or go negative.
 
@@ -31,8 +38,8 @@ All-or-nothing: if a request asks for `N` units and fewer than `N` are available
 
 ## Failure and retry semantics
 
-- **Client retries:** deduplicated via consume/refund idempotency keys keyed by `request_id`.
-- **Downstream failure after consume:** caller invokes `refund` with same `request_id`.
+- **Client retries:** deduplicated via request ledger (`quota:request:{request_id}:meta.status`).
+- **Downstream failure after consume:** caller invokes `refund` with only `request_id`.
 - **Double refund attempts:** return `already_refunded`; no second decrement.
 - **Redis unavailable:** fail closed with HTTP `503 quota_service_unavailable`.
 
