@@ -80,6 +80,23 @@ To force rejections (oversubscribe demand vs limit):
 python scripts/load_test.py --requests 2000 --workers 100 --units 100 --limit 150000
 ```
 
+Example output:
+
+```text
+total_requests: 2000
+workers: 100
+units_per_request: 100
+monthly_limit: 150000
+total_demand_units: 200000
+allowed: 1500
+rejected: 500
+elapsed_seconds: 0.3095
+throughput_rps: 6462.68
+p50_ms: 5.337
+p95_ms: 17.811
+p99_ms: 40.178
+```
+
 Sample output fields:
 
 - `throughput_rps`
