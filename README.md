@@ -96,22 +96,3 @@ p50_ms: 5.337
 p95_ms: 17.811
 p99_ms: 40.178
 ```
-
-Sample output fields:
-
-- `throughput_rps`
-- `p50_ms`
-- `p95_ms`
-- `p99_ms`
-- `allowed`
-- `rejected`
-
-Record your own numbers from your machine and include them in your submission notes.
-
-## Files
-
-- `app/service/quota_service.py` - core consume/refund/usage logic
-- `app/lua/consume.lua` - atomic consume script
-- `app/lua/refund.lua` - atomic refund script
-- `app/service/worker.py` - snapshot flush worker
-- `DESIGN.md` - design decisions and tradeoffs
