@@ -31,11 +31,11 @@ curl -X POST http://localhost:8080/quota/consume \
 curl -X POST http://localhost:8080/quota/refund \
   -H "Content-Type: application/json" \
   -d '{
-    "org_id":"org_123",
-    "feature":"container_tracking",
     "request_id":"req_abc"
   }'
 ```
+
+Refund resolves `org_id`, `feature`, `period`, and `units` from consume-time metadata stored against `request_id`.
 
 ### Current usage
 

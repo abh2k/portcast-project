@@ -14,8 +14,6 @@ class ConsumeResponse(BaseModel):
 
 
 class RefundRequest(BaseModel):
-    org_id: str = Field(min_length=1)
-    feature: str = Field(min_length=1)
     request_id: str = Field(min_length=1)
 
 

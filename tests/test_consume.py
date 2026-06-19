@@ -35,3 +35,18 @@ def test_consume_is_idempotent(quota_service, make_quota):
 
     usage = quota_service.usage(org_id, feature)
     assert usage.used == 50
+
+
+def test_same_request_id_is_idempotent_even_if_reused(quota_service, make_quota):
+    org_a, feature_a = make_quota(monthly_limit=500, feature="container_tracking")
+    org_b, feature_b = make_quota(monthly_limit=500, feature="sailing_schedule")
+
+    first = quota_service.consume(org_a, feature_a, units=10, request_id="shared_req")
+    second = quota_service.consume(org_b, feature_b, units=10, request_id="shared_req")
+
+    assert first.allowed is True
+    assert first.reason == "consumed"
+    assert second.allowed is True
+    assert second.reason == "already_consumed"
+    assert quota_service.usage(org_a, feature_a).used == 10
+    assert quota_service.usage(org_b, feature_b).used == 0

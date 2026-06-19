@@ -25,12 +25,8 @@ class QuotaService:
         return f"quota:{org_id}:{feature}:{period}:state"
 
     @staticmethod
-    def consume_idem_key(org_id: str, feature: str, period: str, request_id: str) -> str:
-        return f"quota:{org_id}:{feature}:{period}:consume:{request_id}"
-
-    @staticmethod
-    def refund_idem_key(org_id: str, feature: str, period: str, request_id: str) -> str:
-        return f"quota:{org_id}:{feature}:{period}:refund:{request_id}"
+    def request_meta_key(request_id: str) -> str:
+        return f"quota:request:{request_id}:meta"
 
     def _ttl(self) -> int:
         return ttl_seconds_until_reset_with_buffer(self.settings.idempotency_ttl_buffer_seconds)
@@ -89,28 +85,40 @@ class QuotaService:
             self.consume_sha,
             2,
             self.state_key(org_id, feature, period),
-            self.consume_idem_key(org_id, feature, period, request_id),
+            self.request_meta_key(request_id),
             units,
             self._ttl(),
+            org_id,
+            feature,
+            period,
         )
         return ConsumeResult(allowed=bool(result[0]), reason=str(result[1]))
 
-    def refund(
-        self,
-        org_id: str,
-        feature: str,
-        request_id: str,
-    ) -> RefundResult:
-        period = current_period()
+    def _resolve_request_metadata(self, request_id: str) -> Optional[dict]:
+        data = self.redis.hgetall(self.request_meta_key(request_id))
+        if not data:
+            return None
+        if "org_id" not in data or "feature" not in data or "period" not in data:
+            return None
+        return data
+
+    def refund(self, request_id: str) -> RefundResult:
+        metadata = self._resolve_request_metadata(request_id)
+        if not metadata:
+            return RefundResult(success=False, reason="consume_not_found")
+
+        org_id = metadata["org_id"]
+        feature = metadata["feature"]
+        period = metadata["period"]
+
         if not self._ensure_state_initialized(org_id, feature, period):
             return RefundResult(success=False, reason="quota_not_configured")
 
         result = self.redis.evalsha(
             self.refund_sha,
-            3,
+            2,
             self.state_key(org_id, feature, period),
-            self.consume_idem_key(org_id, feature, period, request_id),
-            self.refund_idem_key(org_id, feature, period, request_id),
+            self.request_meta_key(request_id),
             self._ttl(),
         )
         return RefundResult(success=bool(result[0]), reason=str(result[1]))

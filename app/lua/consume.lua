@@ -1,15 +1,18 @@
 local state_key = KEYS[1]
-local consume_key = KEYS[2]
+local request_key = KEYS[2]
 
 local units = tonumber(ARGV[1])
 local ttl = tonumber(ARGV[2])
+local org_id = ARGV[3]
+local feature = ARGV[4]
+local period = ARGV[5]
 
 if units == nil or units <= 0 then
   return {0, "invalid_units"}
 end
 
-local existing_units = redis.call("GET", consume_key)
-if existing_units then
+local status = redis.call("HGET", request_key, "status")
+if status then
   return {1, "already_consumed"}
 end
 
@@ -26,6 +29,15 @@ if available < units then
 end
 
 redis.call("HINCRBY", state_key, "used", units)
-redis.call("SET", consume_key, tostring(units), "EX", ttl)
+redis.call(
+  "HSET",
+  request_key,
+  "org_id", org_id,
+  "feature", feature,
+  "period", period,
+  "units", tostring(units),
+  "status", "consumed"
+)
+redis.call("EXPIRE", request_key, ttl)
 
 return {1, "consumed"}

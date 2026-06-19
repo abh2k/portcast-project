@@ -1,20 +1,22 @@
 local state_key = KEYS[1]
-local consume_key = KEYS[2]
-local refund_key = KEYS[3]
+local request_key = KEYS[2]
 
 local ttl = tonumber(ARGV[1])
 
-local existing_refund = redis.call("GET", refund_key)
-if existing_refund then
-  return {1, "already_refunded"}
-end
-
-local consumed_units = redis.call("GET", consume_key)
-if not consumed_units then
+local status = redis.call("HGET", request_key, "status")
+if not status then
   return {0, "consume_not_found"}
 end
 
-local units = tonumber(consumed_units)
+if status == "refunded" then
+  return {1, "already_refunded"}
+end
+
+if status ~= "consumed" then
+  return {0, "invalid_state"}
+end
+
+local units = tonumber(redis.call("HGET", request_key, "units"))
 if units == nil or units <= 0 then
   return {0, "invalid_state"}
 end
@@ -25,6 +27,7 @@ if used < units then
 end
 
 redis.call("HINCRBY", state_key, "used", -units)
-redis.call("SET", refund_key, tostring(units), "EX", ttl)
+redis.call("HSET", request_key, "status", "refunded")
+redis.call("EXPIRE", request_key, ttl)
 
 return {1, "refunded"}
