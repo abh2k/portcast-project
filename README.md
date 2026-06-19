@@ -2,6 +2,8 @@
 
 FastAPI + Redis Lua quota metering service for per-org, per-feature monthly limits.
 
+![Quota Management Service](Quota_management_service.png)
+
 ## Quick start
 
 ```bash
