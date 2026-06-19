@@ -8,14 +8,14 @@ FastAPI + Redis Lua quota metering service for per-org, per-feature monthly limi
 docker compose up --build
 ```
 
-Service URL: `http://localhost:8000`
+Service URL: `http://localhost:8080`
 
 ## API
 
 ### Consume quota
 
 ```bash
-curl -X POST http://localhost:8000/quota/consume \
+curl -X POST http://localhost:8080/quota/consume \
   -H "Content-Type: application/json" \
   -d '{
     "org_id":"org_123",
@@ -28,7 +28,7 @@ curl -X POST http://localhost:8000/quota/consume \
 ### Refund quota
 
 ```bash
-curl -X POST http://localhost:8000/quota/refund \
+curl -X POST http://localhost:8080/quota/refund \
   -H "Content-Type: application/json" \
   -d '{
     "org_id":"org_123",
@@ -41,7 +41,7 @@ curl -X POST http://localhost:8000/quota/refund \
 ### Current usage
 
 ```bash
-curl "http://localhost:8000/quota/usage?org_id=org_123&feature=container_tracking"
+curl "http://localhost:8080/quota/usage?org_id=org_123&feature=container_tracking"
 ```
 
 ## Tests
@@ -51,6 +51,14 @@ Start dependencies:
 ```bash
 docker compose up -d postgres redis
 python apply_migrations.py
+```
+
+Install Python dependencies (local venv):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
 Run tests:
@@ -65,12 +73,20 @@ pytest -q
 python scripts/load_test.py --requests 2000 --workers 100 --units 1
 ```
 
+To force rejections (oversubscribe demand vs limit):
+
+```bash
+python scripts/load_test.py --requests 2000 --workers 100 --units 100 --limit 150000
+```
+
 Sample output fields:
 
 - `throughput_rps`
 - `p50_ms`
 - `p95_ms`
 - `p99_ms`
+- `allowed`
+- `rejected`
 
 Record your own numbers from your machine and include them in your submission notes.
 

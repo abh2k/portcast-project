@@ -1,8 +1,15 @@
 import argparse
 import statistics
+import sys
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
+# Allow direct execution: `python scripts/load_test.py`
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from app.db import get_db_conn
 from app.service.quota_service import QuotaService
@@ -16,9 +23,10 @@ def percentile(values, p):
     return ordered[idx]
 
 
-def run_load(total_requests: int, workers: int, units: int) -> dict:
+def run_load(total_requests: int, workers: int, units: int, limit: int = None) -> dict:
     org_id = f"org_load_{uuid.uuid4().hex[:8]}"
     feature = "container_tracking"
+    monthly_limit = limit if limit is not None else total_requests * units
 
     with get_db_conn() as conn:
         with conn.cursor() as cur:
@@ -29,7 +37,7 @@ def run_load(total_requests: int, workers: int, units: int) -> dict:
                 ON CONFLICT (org_id, feature)
                 DO UPDATE SET monthly_limit = EXCLUDED.monthly_limit, updated_at = now()
                 """,
-                (org_id, feature, total_requests * units),
+                (org_id, feature, monthly_limit),
             )
         conn.commit()
 
@@ -58,7 +66,11 @@ def run_load(total_requests: int, workers: int, units: int) -> dict:
     return {
         "total_requests": total_requests,
         "workers": workers,
+        "units_per_request": units,
+        "monthly_limit": monthly_limit,
+        "total_demand_units": total_requests * units,
         "allowed": allowed_count,
+        "rejected": total_requests - allowed_count,
         "elapsed_seconds": round(elapsed, 4),
         "throughput_rps": round(throughput, 2),
         "p50_ms": round(statistics.median(latencies_ms), 3),
@@ -72,8 +84,14 @@ if __name__ == "__main__":
     parser.add_argument("--requests", type=int, default=2000)
     parser.add_argument("--workers", type=int, default=100)
     parser.add_argument("--units", type=int, default=1)
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Monthly quota limit for test org/feature. Defaults to requests*units.",
+    )
     args = parser.parse_args()
 
-    metrics = run_load(args.requests, args.workers, args.units)
+    metrics = run_load(args.requests, args.workers, args.units, args.limit)
     for key, value in metrics.items():
         print(f"{key}: {value}")
