@@ -33,7 +33,6 @@ curl -X POST http://localhost:8080/quota/refund \
   -d '{
     "org_id":"org_123",
     "feature":"container_tracking",
-    "units":50,
     "request_id":"req_abc"
   }'
 ```

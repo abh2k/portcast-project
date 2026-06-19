@@ -46,7 +46,6 @@ def refund_quota(payload: RefundRequest) -> RefundResponse:
         result = get_quota_service().refund(
             org_id=payload.org_id,
             feature=payload.feature,
-            units=payload.units,
             request_id=payload.request_id,
         )
         return RefundResponse(success=result.success, reason=result.reason)

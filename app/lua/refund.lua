@@ -2,12 +2,7 @@ local state_key = KEYS[1]
 local consume_key = KEYS[2]
 local refund_key = KEYS[3]
 
-local units = tonumber(ARGV[1])
-local ttl = tonumber(ARGV[2])
-
-if units == nil or units <= 0 then
-  return {0, "invalid_units"}
-end
+local ttl = tonumber(ARGV[1])
 
 local existing_refund = redis.call("GET", refund_key)
 if existing_refund then
@@ -19,9 +14,9 @@ if not consumed_units then
   return {0, "consume_not_found"}
 end
 
-local original_units = tonumber(consumed_units)
-if original_units ~= units then
-  return {0, "refund_units_mismatch"}
+local units = tonumber(consumed_units)
+if units == nil or units <= 0 then
+  return {0, "invalid_state"}
 end
 
 local used = tonumber(redis.call("HGET", state_key, "used") or "0")

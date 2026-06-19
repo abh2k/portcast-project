@@ -99,7 +99,6 @@ class QuotaService:
         self,
         org_id: str,
         feature: str,
-        units: int,
         request_id: str,
     ) -> RefundResult:
         period = current_period()
@@ -112,7 +111,6 @@ class QuotaService:
             self.state_key(org_id, feature, period),
             self.consume_idem_key(org_id, feature, period, request_id),
             self.refund_idem_key(org_id, feature, period, request_id),
-            units,
             self._ttl(),
         )
         return RefundResult(success=bool(result[0]), reason=str(result[1]))
