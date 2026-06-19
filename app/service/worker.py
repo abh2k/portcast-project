@@ -12,18 +12,18 @@ def snapshot_once() -> int:
     pattern = f"quota:*:*:{period}:state"
     written = 0
 
-    for key in redis_client.scan_iter(match=pattern):
-        parts = key.split(":")
-        if len(parts) != 5:
-            continue
+    with get_db_conn() as conn:
+        with conn.cursor() as cur:
+            for key in redis_client.scan_iter(match=pattern):
+                parts = key.split(":")
+                if len(parts) != 5:
+                    continue
 
-        _, org_id, feature, period_value, _ = parts
-        data = redis_client.hgetall(key)
-        limit = int(data.get("limit", 0))
-        used = int(data.get("used", 0))
+                _, org_id, feature, period_value, _ = parts
+                data = redis_client.hgetall(key)
+                limit = int(data.get("limit", 0))
+                used = int(data.get("used", 0))
 
-        with get_db_conn() as conn:
-            with conn.cursor() as cur:
                 cur.execute(
                     """
                     INSERT INTO monthly_usage (
@@ -43,8 +43,8 @@ def snapshot_once() -> int:
                     """,
                     (org_id, feature, period_value, limit, used),
                 )
-            conn.commit()
-            written += 1
+                written += 1
+        conn.commit()
 
     return written
 
