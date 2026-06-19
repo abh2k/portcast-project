@@ -28,8 +28,11 @@ class QuotaService:
     def request_meta_key(request_id: str) -> str:
         return f"quota:request:{request_id}:meta"
 
-    def _ttl(self) -> int:
-        return ttl_seconds_until_reset_with_buffer(self.settings.idempotency_ttl_buffer_seconds)
+    def _state_ttl(self) -> int:
+        return ttl_seconds_until_reset_with_buffer(self.settings.state_ttl_buffer_seconds)
+
+    def _request_metadata_ttl(self) -> int:
+        return self.settings.request_metadata_ttl_seconds
 
     @staticmethod
     def _bool_from_lua(value: object) -> bool:
@@ -72,7 +75,7 @@ class QuotaService:
 
         used_units = int(usage_row["used_units"]) if usage_row else 0
         limit = int(quota_row["monthly_limit"])
-        ttl = self._ttl()
+        ttl = self._state_ttl()
 
         # Keep state creation race-safe across multiple service instances.
         self.redis.hsetnx(key, "limit", limit)
@@ -97,7 +100,7 @@ class QuotaService:
             self.state_key(org_id, feature, period),
             self.request_meta_key(request_id),
             units,
-            self._ttl(),
+            self._request_metadata_ttl(),
             org_id,
             feature,
             period,
@@ -129,7 +132,7 @@ class QuotaService:
             2,
             self.state_key(org_id, feature, period),
             self.request_meta_key(request_id),
-            self._ttl(),
+            self._request_metadata_ttl(),
         )
         return RefundResult(success=self._bool_from_lua(result[0]), reason=str(result[1]))
 

@@ -96,3 +96,5 @@ p50_ms: 5.337
 p95_ms: 17.811
 p99_ms: 40.178
 ```
+
+In the oversubscribed hot-key test, p95/p99 exceed 10ms because all requests contend on one Redis key and Lua execution is serialized. Correctness is preserved: allowed = 1500, rejected = 500, and usage does not exceed the configured limit.

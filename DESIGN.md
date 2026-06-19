@@ -25,6 +25,10 @@ Redis stores:
    - `units`
    - `status`
 
+TTL policy:
+- state key TTL: `seconds_until_period_end + 7 days`
+- request metadata TTL: `24 hours`
+
 Atomic correctness comes from Lua script execution (`EVALSHA`) in Redis:
 
 - `consume.lua` checks `request_key.status` for idempotency, validates quota, increments `used`, and writes request metadata with `status=consumed`.
