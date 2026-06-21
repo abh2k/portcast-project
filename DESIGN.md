@@ -94,6 +94,8 @@ Core rule:
 
 In this implementation, the gateway sends the same `idempotency_key` directly to quota APIs (`consume`/`refund`).
 
+The quota service is intentionally agnostic to downstream operation state. `already_consumed` only means quota was previously deducted for this idempotency key; it is not by itself a decision to execute the downstream operation. The gateway/consumer combines this with its own operation store (`in_progress`, `succeeded`, `terminal_failed`) before deciding whether to retry downstream or return a stored response.
+
 Case 1: Client times out, but downstream may still succeed
 - Client sends key `K1`
 - Gateway calls `consume(K1)` and quota is deducted once
