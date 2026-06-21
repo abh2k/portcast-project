@@ -168,30 +168,31 @@ pytest -q
 
 ## Real load-test numbers
 
-This load test sends many concurrent consume requests to one org/feature.
-It measures throughput + latency and checks allowed/rejected behavior under oversubscription.
+This load test sends many concurrent HTTP calls to `POST /quota/consume` through nginx (`localhost:8080`) for one org/feature.
+It measures end-to-end throughput + latency (network + nginx + FastAPI + quota service) and checks allowed/rejected behavior under oversubscription.
+Load is distributed by nginx across 3 API replicas (`docker compose ... --scale app=3`).
 
 Command:
 
+Local machine run (used lower worker count because this was executed on a low-core local Mac):
+
 ```bash
-.venv/bin/python scripts/load_test.py --requests 2000 --workers 100 --units 100 --limit 150000
+.venv/bin/python scripts/load_test.py --requests 5000 --workers 5 --units 50 --limit 150000
 ```
 
-Output:
-
 ```text
-total_requests: 2000
-workers: 100
-units_per_request: 100
+total_requests: 5000
+workers: 5
+units_per_request: 50
 monthly_limit: 150000
-total_demand_units: 200000
-allowed: 1500
-rejected: 500
-elapsed_seconds: 0.2934
-throughput_rps: 6815.74
-p50_ms: 5.784
-p95_ms: 17.591
-p99_ms: 47.679
+total_demand_units: 250000
+allowed: 3000
+rejected: 2000
+elapsed_seconds: 3.4117
+throughput_rps: 1465.52
+p50_ms: 2.847
+p95_ms: 4.955
+p99_ms: 17.336
 ```
 
 ## Scale-up path to 50k orgs
