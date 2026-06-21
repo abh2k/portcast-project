@@ -198,3 +198,21 @@ To support 50k orgs:
 
 4. Hot-key serialization.  
    One very hot `(org_id, feature, period)` key can bottleneck even with sharding.
+
+## AI Assistance Disclosure
+
+AI was used for:
+- reviewing edge cases
+- improving test coverage ideas
+- documentation wording and formating
+- speed up the implementation process
+- Creating the load test script
+
+Own design decisions:
+- Using redis for atomic consume/refund
+- all-or-nothing batch behavior
+- monthly calendar reset
+- Idempotency loop in retries
+- Postgres snapshot strategy
+
+All the design decisions were taken by me, I used AI to speed up the implementation. I reviewed all the outputs that the AI generated.
