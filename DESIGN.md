@@ -170,7 +170,7 @@ pytest -q
 
 This load test sends many concurrent HTTP calls to `POST /quota/consume` through nginx (`localhost:8080`) for one org/feature.
 It measures end-to-end throughput + latency (network + nginx + FastAPI + quota service) and checks allowed/rejected behavior under oversubscription.
-Load is distributed by nginx across 3 API replicas (`docker compose ... --scale app=3`).
+Load is distributed by nginx across 3 API replicas.
 
 Command:
 
