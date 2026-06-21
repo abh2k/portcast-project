@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 from redis import Redis
+from redis.exceptions import RedisError
 
 from app.config import get_settings
 from app.db import get_db_conn
@@ -138,12 +139,53 @@ class QuotaService:
 
     def usage(self, org_id: str, feature: str) -> UsageResult:
         period = current_period()
-        if not self._ensure_state_initialized(org_id, feature, period):
-            raise ValueError("quota_not_configured")
+        key = self.state_key(org_id, feature, period)
+        try:
+            data = self.redis.hgetall(key)
+        except RedisError:
+            data = {}
 
-        data = self.redis.hgetall(self.state_key(org_id, feature, period))
-        limit = int(data.get("limit", 0))
-        used = int(data.get("used", 0))
+        # Primary path: return live Redis value when key exists.
+        if data:
+            limit = int(data.get("limit", 0))
+            used = int(data.get("used", 0))
+            return UsageResult(
+                org_id=org_id,
+                feature=feature,
+                period=period,
+                limit=limit,
+                used=used,
+                available=max(limit - used, 0),
+                reset_at=reset_at_iso(),
+            )
+
+        # Fallback path: derive usage from SQL when Redis key is absent.
+        with get_db_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT monthly_limit
+                    FROM quota_configs
+                    WHERE org_id = %s AND feature = %s
+                    """,
+                    (org_id, feature),
+                )
+                quota_row = cur.fetchone()
+                if not quota_row:
+                    raise ValueError("quota_not_configured")
+
+                cur.execute(
+                    """
+                    SELECT used_units
+                    FROM monthly_usage
+                    WHERE org_id = %s AND feature = %s AND period = %s
+                    """,
+                    (org_id, feature, period),
+                )
+                usage_row = cur.fetchone()
+
+        limit = int(quota_row["monthly_limit"])
+        used = int(usage_row["used_units"]) if usage_row else 0
         return UsageResult(
             org_id=org_id,
             feature=feature,

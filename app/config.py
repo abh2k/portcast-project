@@ -23,6 +23,6 @@ def get_settings() -> Settings:
             os.getenv("STATE_TTL_BUFFER_SECONDS", str(7 * 24 * 60 * 60))
         ),
         request_metadata_ttl_seconds=int(
-            os.getenv("REQUEST_METADATA_TTL_SECONDS", str(24 * 60 * 60))
+            os.getenv("REQUEST_METADATA_TTL_SECONDS", str(60 * 60))
         ),
     )

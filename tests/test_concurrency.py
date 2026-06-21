@@ -1,15 +1,17 @@
 from concurrent.futures import ThreadPoolExecutor
+import uuid
 
 
 def test_hot_key_contention_never_overserves(quota_service, make_quota):
     org_id, feature = make_quota(monthly_limit=500)
+    run_id = str(uuid.uuid4())
 
     def consume_once(i: int) -> bool:
         result = quota_service.consume(
             org_id=org_id,
             feature=feature,
             units=1,
-            request_id=f"req_{i}",
+            request_id=f"{run_id}_{i}",
         )
         return result.allowed
 

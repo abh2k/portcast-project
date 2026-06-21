@@ -1,14 +1,18 @@
+import uuid
+
 from app.periods import current_period
 
 
 def test_consume_success_and_quota_exceeded(quota_service, make_quota):
     org_id, feature = make_quota(monthly_limit=10)
+    request_id_1 = str(uuid.uuid4())
+    request_id_2 = str(uuid.uuid4())
 
-    success = quota_service.consume(org_id, feature, units=6, request_id="req_1")
+    success = quota_service.consume(org_id, feature, units=6, request_id=request_id_1)
     assert success.allowed is True
     assert success.reason == "consumed"
 
-    failed = quota_service.consume(org_id, feature, units=5, request_id="req_2")
+    failed = quota_service.consume(org_id, feature, units=5, request_id=request_id_2)
     assert failed.allowed is False
     assert failed.reason == "quota_exceeded"
 
@@ -21,10 +25,11 @@ def test_consume_success_and_quota_exceeded(quota_service, make_quota):
 
 def test_consume_is_idempotent(quota_service, make_quota):
     org_id, feature = make_quota(monthly_limit=500)
+    request_id = str(uuid.uuid4())
 
-    first = quota_service.consume(org_id, feature, units=50, request_id="same_req")
-    second = quota_service.consume(org_id, feature, units=50, request_id="same_req")
-    third = quota_service.consume(org_id, feature, units=50, request_id="same_req")
+    first = quota_service.consume(org_id, feature, units=50, request_id=request_id)
+    second = quota_service.consume(org_id, feature, units=50, request_id=request_id)
+    third = quota_service.consume(org_id, feature, units=50, request_id=request_id)
 
     assert first.allowed is True
     assert first.reason == "consumed"
@@ -40,9 +45,10 @@ def test_consume_is_idempotent(quota_service, make_quota):
 def test_same_request_id_is_idempotent_even_if_reused(quota_service, make_quota):
     org_a, feature_a = make_quota(monthly_limit=500, feature="container_tracking")
     org_b, feature_b = make_quota(monthly_limit=500, feature="sailing_schedule")
+    request_id = str(uuid.uuid4())
 
-    first = quota_service.consume(org_a, feature_a, units=10, request_id="shared_req")
-    second = quota_service.consume(org_b, feature_b, units=10, request_id="shared_req")
+    first = quota_service.consume(org_a, feature_a, units=10, request_id=request_id)
+    second = quota_service.consume(org_b, feature_b, units=10, request_id=request_id)
 
     assert first.allowed is True
     assert first.reason == "consumed"
