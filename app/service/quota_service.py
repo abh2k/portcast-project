@@ -26,8 +26,8 @@ class QuotaService:
         return f"quota:{org_id}:{feature}:{period}:state"
 
     @staticmethod
-    def request_meta_key(request_id: str) -> str:
-        return f"quota:request:{request_id}:meta"
+    def idempotency_meta_key(idempotency_key: str) -> str:
+        return f"quota:idempotency:{idempotency_key}:meta"
 
     def _state_ttl(self) -> int:
         return ttl_seconds_until_reset_with_buffer(self.settings.state_ttl_buffer_seconds)
@@ -89,7 +89,7 @@ class QuotaService:
         org_id: str,
         feature: str,
         units: int,
-        request_id: str,
+        idempotency_key: str,
     ) -> ConsumeResult:
         period = current_period()
         if not self._ensure_state_initialized(org_id, feature, period):
@@ -99,7 +99,7 @@ class QuotaService:
             self.consume_sha,
             2,
             self.state_key(org_id, feature, period),
-            self.request_meta_key(request_id),
+            self.idempotency_meta_key(idempotency_key),
             units,
             self._request_metadata_ttl(),
             org_id,
@@ -108,16 +108,16 @@ class QuotaService:
         )
         return ConsumeResult(allowed=self._bool_from_lua(result[0]), reason=str(result[1]))
 
-    def _resolve_request_metadata(self, request_id: str) -> Optional[dict]:
-        data = self.redis.hgetall(self.request_meta_key(request_id))
+    def _resolve_idempotency_metadata(self, idempotency_key: str) -> Optional[dict]:
+        data = self.redis.hgetall(self.idempotency_meta_key(idempotency_key))
         if not data:
             return None
         if "org_id" not in data or "feature" not in data or "period" not in data:
             return None
         return data
 
-    def refund(self, request_id: str) -> RefundResult:
-        metadata = self._resolve_request_metadata(request_id)
+    def refund(self, idempotency_key: str) -> RefundResult:
+        metadata = self._resolve_idempotency_metadata(idempotency_key)
         if not metadata:
             return RefundResult(success=False, reason="consume_not_found")
 
@@ -132,7 +132,7 @@ class QuotaService:
             self.refund_sha,
             2,
             self.state_key(org_id, feature, period),
-            self.request_meta_key(request_id),
+            self.idempotency_meta_key(idempotency_key),
             self._request_metadata_ttl(),
         )
         return RefundResult(success=self._bool_from_lua(result[0]), reason=str(result[1]))

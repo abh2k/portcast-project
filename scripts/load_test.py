@@ -47,7 +47,7 @@ def run_load(total_requests: int, workers: int, units: int, limit: int = None) -
 
     def task(i):
         t0 = time.perf_counter()
-        result = service.consume(org_id, feature, units=units, request_id=f"{org_id}_req_{i}")
+        result = service.consume(org_id, feature, units=units, idempotency_key=f"{org_id}_key_{i}")
         latency = (time.perf_counter() - t0) * 1000
         return result.allowed, latency
 

@@ -8,9 +8,9 @@ from app.service.worker import snapshot_once
 def test_snapshot_flush_is_overwrite_idempotent(quota_service, make_quota):
     org_id, feature = make_quota(monthly_limit=500)
     period = current_period()
-    request_id = str(uuid.uuid4())
+    idempotency_key = str(uuid.uuid4())
 
-    quota_service.consume(org_id, feature, units=100, request_id=request_id)
+    quota_service.consume(org_id, feature, units=100, idempotency_key=idempotency_key)
     written_1 = snapshot_once()
     assert written_1 >= 1
 

@@ -11,7 +11,7 @@ def test_hot_key_contention_never_overserves(quota_service, make_quota):
             org_id=org_id,
             feature=feature,
             units=1,
-            request_id=f"{run_id}_{i}",
+            idempotency_key=f"{run_id}_{i}",
         )
         return result.allowed
 

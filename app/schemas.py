@@ -5,7 +5,7 @@ class ConsumeRequest(BaseModel):
     org_id: str = Field(min_length=1)
     feature: str = Field(min_length=1)
     units: int = Field(gt=0)
-    request_id: str = Field(min_length=1)
+    idempotency_key: str = Field(min_length=1)
 
 
 class ConsumeResponse(BaseModel):
@@ -14,7 +14,7 @@ class ConsumeResponse(BaseModel):
 
 
 class RefundRequest(BaseModel):
-    request_id: str = Field(min_length=1)
+    idempotency_key: str = Field(min_length=1)
 
 
 class RefundResponse(BaseModel):

@@ -26,7 +26,7 @@ def redis_client() -> Redis:
         client.ping()
     except RedisError as exc:
         pytest.skip(f"Redis unavailable for integration tests: {exc}")
-    # Test isolation: request_id ledger keys persist with TTL, so clear between tests.
+    # Test isolation: idempotency metadata keys persist with TTL, so clear between tests.
     client.flushdb()
     yield client
     client.flushdb()

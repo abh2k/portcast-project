@@ -33,7 +33,7 @@ def consume_quota(payload: ConsumeRequest) -> ConsumeResponse:
             org_id=payload.org_id,
             feature=payload.feature,
             units=payload.units,
-            request_id=payload.request_id,
+            idempotency_key=payload.idempotency_key,
         )
         return ConsumeResponse(allowed=result.allowed, reason=result.reason)
     except RedisError as exc:
@@ -44,7 +44,7 @@ def consume_quota(payload: ConsumeRequest) -> ConsumeResponse:
 def refund_quota(payload: RefundRequest) -> RefundResponse:
     try:
         result = get_quota_service().refund(
-            request_id=payload.request_id,
+            idempotency_key=payload.idempotency_key,
         )
         return RefundResponse(success=result.success, reason=result.reason)
     except RedisError as exc:
