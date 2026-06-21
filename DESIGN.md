@@ -179,7 +179,7 @@ Command:
 Local machine run (used lower worker count because this was executed on a low-core local Mac):
 
 ```bash
-.venv/bin/python scripts/load_test.py --requests 5000 --workers 5 --units 50 --limit 150000
+python scripts/load_test.py --requests 5000 --workers 5 --units 50 --limit 150000
 ```
 
 ```text
