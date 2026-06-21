@@ -10,11 +10,18 @@ services:
       SNAPSHOT_INTERVAL_SECONDS: "5"
       STATE_TTL_BUFFER_SECONDS: "604800"
       REQUEST_METADATA_TTL_SECONDS: "3600"
-    ports:
-      - "8080:8000"
     depends_on:
       - postgres
       - redis
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - app
 
   worker:
     build:
