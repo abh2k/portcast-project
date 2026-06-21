@@ -31,7 +31,7 @@ Consume:
 ```bash
 curl -X POST http://localhost:8080/quota/consume \
   -H "Content-Type: application/json" \
-  -d '{"org_id":"org_123","feature":"container_tracking","units":50,"idempotency_key":"key_abc"}'
+  -d '{"org_id":"org_123","feature":"container_tracking","units":50,"idempotency_key":"org_123-550e8400-e29b-41d4-a716-446655440000"}'
 ```
 
 Refund:
@@ -39,7 +39,7 @@ Refund:
 ```bash
 curl -X POST http://localhost:8080/quota/refund \
   -H "Content-Type: application/json" \
-  -d '{"idempotency_key":"key_abc"}'
+  -d '{"idempotency_key":"org_123-550e8400-e29b-41d4-a716-446655440000"}'
 ```
 
 Usage:
@@ -72,6 +72,7 @@ All app instances are stateless and share the same Redis/Postgres state, so scal
 TTL:
 - state key TTL: `seconds_until_period_end + 7 days`
 - request metadata TTL: `1 hour`
+This TTL is chosen to cover normal gateway retries, client timeouts, and short delayed refund/reconciliation jobs while preventing unbounded Redis growth.
 
 Correctness guarantee:
 - Redis Lua scripts are atomic.
@@ -89,6 +90,7 @@ If request asks for `N` units and available is `< N`, request is rejected (`quot
 Core rule:
 - Same logical operation retry -> same `idempotency_key`
 - New logical operation attempt -> new `idempotency_key`
+- Idempotency key format: `<org_id>-<uuid>` (example: `org_123-550e8400-e29b-41d4-a716-446655440000`) to avoid cross-tenant key collisions.
 
 In this implementation, the gateway sends the same `idempotency_key` directly to quota APIs (`consume`/`refund`).
 
